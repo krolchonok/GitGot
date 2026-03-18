@@ -7,7 +7,7 @@ import json
 import re
 import requests
 import sys
-import ssdeep
+import ppdeep as ssdeep
 import os
 import os.path
 import urllib.parse
