@@ -7,15 +7,14 @@ import json
 import re
 import requests
 import sys
-import ssdeep
-import sre_constants
+import ppdeep as ssdeep
 import os
 import os.path
 import urllib.parse
 
 
 SIMILARITY_THRESHOLD = 65
-ACCESS_TOKEN = "<NO-PERMISSION-GITHUB-TOKEN-HERE>"
+ACCESS_TOKEN = os.environ.get("GITHUB_ACCESS_TOKEN")
 GITHUB_WHITESPACE = "\\.|,|:|;|/|\\\\|`|'|\"|=|\\*|!|\\?" \
                     "|\\#|\\$|\\&|\\+|\\^|\\||\\~|<|>|\\(" \
                     "|\\)|\\{|\\}|\\[|\\]| "
@@ -398,7 +397,7 @@ def regex_validator(args, state):
                 continue
             try:
                 re.subn(line, r'\1', "Expression test")
-            except sre_constants.error as e:
+            except re.error as e:
                 print(bcolors.FAIL + "Invalid Regular expression:\n\t" + line)
                 if "group" in str(e):
                     print(
@@ -420,8 +419,6 @@ def regex_validator(args, state):
 
 
 def main():
-    global ACCESS_TOKEN
-
     if sys.version_info < (3, 0):
         sys.stdout.write("Sorry, requires Python 3.x, not Python 2.x\n")
         sys.exit(1)
@@ -473,9 +470,6 @@ def main():
     state = State()
     state.index = 0
 
-    if ACCESS_TOKEN == "<NO-PERMISSION-GITHUB-TOKEN-HERE>":
-        ACCESS_TOKEN = os.environ.get("GITHUB_ACCESS_TOKEN", "")
-
     if not ACCESS_TOKEN:
         print("Github Access token not set")
         sys.exit(1)
@@ -514,9 +508,9 @@ def main():
 
     if args.url:
         g = github.Github(base_url=args.url + "/api/v3",
-                          login_or_token=ACCESS_TOKEN)
+                          auth=github.Auth.Token(ACCESS_TOKEN))
     else:
-        g = github.Github(ACCESS_TOKEN)
+        g = github.Github(auth=github.Auth.Token(ACCESS_TOKEN))
 
 
     if state.is_gist:
