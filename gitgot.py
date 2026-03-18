@@ -414,7 +414,7 @@ def regex_validator(args, state):
         split = re.split(GITHUB_WHITESPACE, state.query)
 
     for part in [state.query] + split:
-        if part:
+        if part and (part == state.query or len(part) > 3):
             escaped_query = re.escape(part) if split else \
                 part.replace("\"", "")
             state.checks.append("(?i)(" + escaped_query + ")")
