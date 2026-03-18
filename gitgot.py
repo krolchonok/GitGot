@@ -36,11 +36,11 @@ class bcolors:
 class State:
 
     def __init__(self,
-                 bad_users=[],
-                 bad_repos=[],
-                 bad_files=[],
-                 bad_signatures=[],
-                 checks=[],
+                 bad_users=None,
+                 bad_repos=None,
+                 bad_files=None,
+                 bad_signatures=None,
+                 checks=None,
                  lastInitIndex=0,
                  index=0,
                  totalCount=0,
@@ -49,11 +49,11 @@ class State:
                  is_gist=False,
                  line_numbers=False,
                  ):
-        self.bad_users = bad_users
-        self.bad_repos = bad_repos
-        self.bad_files = bad_files
-        self.bad_signatures = bad_signatures
-        self.checks = checks
+        self.bad_users = bad_users if bad_users is not None else []
+        self.bad_repos = bad_repos if bad_repos is not None else []
+        self.bad_files = bad_files if bad_files is not None else []
+        self.bad_signatures = bad_signatures if bad_signatures is not None else []
+        self.checks = checks if checks is not None else []
         self.lastInitIndex = lastInitIndex
         self.index = index
         self.totalCount = totalCount
@@ -147,8 +147,6 @@ def print_handler(contents):
     finally:
         print(contents)
 
-    print(contents)
-
 
 def input_handler(state, is_gist):
     prompt = bcolors.HEADER + \
@@ -166,7 +164,7 @@ def input_handler(state, is_gist):
         ", [p]rint contents, [s]ave state, [a]dd to log, " + \
         "search [/(findme)], [b]ack, [q]uit, next [<Enter>]===: " + \
         bcolors.ENDC
-    return input(prompt)
+    return input(prompt).strip()
 
 
 def pagination_hack(repositories, state):
@@ -195,13 +193,17 @@ def ui_loop(repo, log_buf, state, is_gist=False):
 
     if choice == "c":
         state.bad_signatures.append(ssdeep.hash(repo.decoded_content))
+        print(bcolors.OKGREEN + "Added to ignore list: similar contents" + bcolors.ENDC)
     elif choice == "u":
-        state.bad_users.append(repo.owner.login if is_gist
-                               else repo.repository.owner.login)
+        user = repo.owner.login if is_gist else repo.repository.owner.login
+        state.bad_users.append(user)
+        print(bcolors.OKGREEN + "Added to ignore list: user [{}]".format(user) + bcolors.ENDC)
     elif choice == "r" and not is_gist:
         state.bad_repos.append(repo.repository.name)
+        print(bcolors.OKGREEN + "Added to ignore list: repo [{}]".format(repo.repository.name) + bcolors.ENDC)
     elif choice == "f" and not is_gist:
         state.bad_files.append(repo.name)
+        print(bcolors.OKGREEN + "Added to ignore list: filename [{}]".format(repo.name) + bcolors.ENDC)
     elif choice == "p":
         print_handler(repo.decoded_content)
         ui_loop(repo, log_buf, state, is_gist)
@@ -211,6 +213,7 @@ def ui_loop(repo, log_buf, state, is_gist=False):
     elif choice == "a":
         with open(state.logfile, "a") as fd:
             fd.write(log_buf)
+        print(bcolors.OKGREEN + "Result added to log [{}]".format(state.logfile) + bcolors.ENDC)
     elif choice.startswith("/"):
         log_buf += regex_handler(choice, repo)
         ui_loop(repo, log_buf, state, is_gist)
