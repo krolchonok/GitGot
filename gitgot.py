@@ -7,6 +7,8 @@ import json
 import re
 import requests
 import sys
+import termios
+import tty
 import ppdeep as ssdeep
 import os
 import os.path
@@ -148,6 +150,28 @@ def print_handler(contents):
         print(contents)
 
 
+def get_single_char():
+    """Read one character from stdin instantly, without waiting for Enter.
+
+    Falls back to a full line read when stdin is not a TTY (e.g. in pipes or
+    automated tests) so that the rest of the tool still works correctly.
+    """
+    if not sys.stdin.isatty():
+        line = sys.stdin.readline()
+        if not line:  # EOF — treat as quit
+            sys.exit(0)
+        return line.strip()
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+
 def input_handler(state, is_gist):
     prompt = bcolors.HEADER + \
         "(Result {}/{})".format(
@@ -164,7 +188,29 @@ def input_handler(state, is_gist):
         ", [p]rint contents, [s]ave state, [a]dd to log, " + \
         "search [/(findme)], [b]ack, [q]uit, next [<Enter>]===: " + \
         bcolors.ENDC
-    return input(prompt).strip()
+
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+
+    ch = get_single_char()
+
+    if ch == '/':
+        # The search command needs a full regex pattern typed by the user.
+        # Echo the '/' and let them type the rest of the pattern + Enter.
+        sys.stdout.write(ch)
+        sys.stdout.flush()
+        rest = input('')
+        return ch + rest
+
+    # Echo the pressed key and move to a new line for readability.
+    sys.stdout.write(ch + '\n')
+    sys.stdout.flush()
+
+    # Treat Enter (both \r and \n) as an empty choice → advance to next result.
+    if ch in ('\r', '\n'):
+        return ''
+
+    return ch
 
 
 def pagination_hack(repositories, state):
