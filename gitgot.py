@@ -8,7 +8,6 @@ import re
 import requests
 import sys
 import ssdeep
-import sre_constants
 import os
 import os.path
 import urllib.parse
@@ -398,7 +397,7 @@ def regex_validator(args, state):
                 continue
             try:
                 re.subn(line, r'\1', "Expression test")
-            except sre_constants.error as e:
+            except re.error as e:
                 print(bcolors.FAIL + "Invalid Regular expression:\n\t" + line)
                 if "group" in str(e):
                     print(
@@ -514,9 +513,9 @@ def main():
 
     if args.url:
         g = github.Github(base_url=args.url + "/api/v3",
-                          login_or_token=ACCESS_TOKEN)
+                          auth=github.Auth.Token(ACCESS_TOKEN))
     else:
-        g = github.Github(ACCESS_TOKEN)
+        g = github.Github(auth=github.Auth.Token(ACCESS_TOKEN))
 
 
     if state.is_gist:
